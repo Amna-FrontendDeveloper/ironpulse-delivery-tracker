@@ -22,11 +22,14 @@ const deliverySchema = new mongoose.Schema(
       trim: true,
     },
 
+    
+
     status: {
       type: String,
       enum: ["Pending", "Picked Up", "In Transit", "Delivered", "Cancelled"],
       default: "Pending",
     },
+    
 
     driverName: {
       type: String,

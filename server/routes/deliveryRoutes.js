@@ -3,6 +3,10 @@ const express = require("express");
 const router = express.Router();
 const Delivery = require("../models/Delivery");
 
+function isValidObjectId(id) {
+  return /^[a-fA-F0-9]{24}$/.test(id);
+}
+
 // GET: Get all deliveries
 router.get("/", async (req, res) => {
   try {
@@ -26,6 +30,11 @@ router.post("/", async (req, res) => {
 // GET: Get one delivery by ID
 router.get("/:id", async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id)) {
+  return res.status(400).json({
+    message: "Invalid delivery ID",
+  });
+}
     const delivery = await Delivery.findById(req.params.id);
 
     if (!delivery) {
@@ -41,6 +50,11 @@ router.get("/:id", async (req, res) => {
 // PUT: Update a delivery
 router.put("/:id", async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({
+        message: "Invalid delivery ID",
+      });
+    }
     const delivery = await Delivery.findByIdAndUpdate(
       req.params.id,
       req.body,
@@ -60,6 +74,11 @@ router.put("/:id", async (req, res) => {
 // DELETE: Delete a delivery
 router.delete("/:id", async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({
+        message: "Invalid delivery ID",
+      });
+    }
     const delivery = await Delivery.findByIdAndDelete(req.params.id);
 
     if (!delivery) {

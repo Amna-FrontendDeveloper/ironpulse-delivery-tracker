@@ -1,5 +1,6 @@
 
 require("dotenv").config();
+const deliveryRoutes = require("./routes/deliveryRoutes");
 
 // const dns = require("dns");
 // dns.setServers(["8.8.8.8", "8.8.4.4"]);
@@ -12,6 +13,8 @@ const PORT = process.env.PORT || 5000;
 
 // Middleware to read JSON data
 app.use(express.json());
+
+app.use("/api/deliveries", deliveryRoutes);
 
 // Health endpoint
 app.get("/health", (req, res) => {

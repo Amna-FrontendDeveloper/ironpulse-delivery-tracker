@@ -1,8 +1,17 @@
 
+require("dotenv").config();
+
+// const dns = require("dns");
+// dns.setServers(["8.8.8.8", "8.8.4.4"]);
+
 const express = require("express");
+const mongoose = require("mongoose");
 
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
+
+// Middleware to read JSON data
+app.use(express.json());
 
 // Health endpoint
 app.get("/health", (req, res) => {
@@ -12,7 +21,26 @@ app.get("/health", (req, res) => {
   });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`IronPulse server running on http://localhost:${PORT}`);
-});
+// MongoDB connection and server startup
+async function startServer() {
+  try {
+    if (!process.env.MONGODB_URI) {
+      throw new Error("MONGODB_URI is missing from the .env file");
+    }
+
+    await mongoose.connect(process.env.MONGODB_URI);
+
+    console.log("MongoDB connected successfully");
+
+    app.listen(PORT, () => {
+      console.log(
+        `IronPulse server running on http://localhost:${PORT}`
+      );
+    });
+  } catch (error) {
+    console.error("MongoDB connection failed:", error.message);
+    process.exit(1);
+  }
+}
+
+startServer();

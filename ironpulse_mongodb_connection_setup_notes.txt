@@ -1,0 +1,129 @@
+ronPulse Fitness Equipment Delivery Tracker MongoDB Atlas Connection
+Setup — Progress Notes Date: 24 October 2026 Project folder:
+D:Internship projectsproject-delivery-tracker Backend folder: server
+
+1.  Goal The goal was to connect the project’s Express/Mongoose backend
+    to MongoDB Atlas so the backend can use a cloud database for the
+    upcoming Task 2 work (Mongoose models and CRUD REST API).
+
+2.  Existing setup
+
+-   Backend uses Node.js, Express, dotenv, and Mongoose.
+-   Installed packages were checked with: npm list mongoose dotenv
+-   Installed versions reported: dotenv@18.0.8 mongoose@9.11.2
+-   Main backend entry file: server/index.js
+-   Environment file: server/.env
+-   The server already had a /health endpoint returning:
+    {“status”:“OK”,“message”:“IronPulse server is running”}
+
+3.  Atlas setup steps completed
+
+-   Created/selected an Atlas cluster named cluster0.
+-   Confirmed the cluster status was Available.
+-   Created a MongoDB database user and copied its generated password.
+-   Added the current public IP address in Atlas Network Access.
+-   Copied the Atlas Drivers connection-string template.
+-   Added MONGODB_URI to server/.env.
+-   Kept credentials in .env rather than hard-coding them into index.js.
+-   Do not commit or share the real .env file or its credentials.
+
+4.  Problems encountered and tests performed
+
+Problem A: Initial Atlas connection failed with: MongoDB connection
+failed: queryTxt ETIMEOUT cluster0.qxmfild.mongodb.net
+
+Meaning: - The mongodb+srv:// URI requires DNS SRV and TXT lookups. -
+The normal DNS resolver on this network was not returning the required
+TXT record in time.
+
+Test 1 — Google DNS TXT lookup: nslookup -type=TXT
+cluster0.qxmfild.mongodb.net 8.8.8.8 Result: - DNS requests timed out.
+
+Test 2 — Cloudflare DNS-over-HTTPS TXT lookup: curl.exe
+“https://cloudflare-dns.com/dns-query?name=cluster0.qxmfild.mongodb.net&type=TXT”
+-H “accept: application/dns-json” Result: - Successful JSON response. -
+TXT record contained authSource=admin and
+replicaSet=atlas-2dg53w-shard-0.
+
+Test 3 — Cloudflare DNS-over-HTTPS SRV lookup: curl.exe
+“https://cloudflare-dns.com/dns-query?name=_mongodb._tcp.cluster0.qxmfild.mongodb.net&type=SRV”
+-H “accept: application/dns-json” Result: - Returned three MongoDB
+server hostnames on port 27017:
+ac-mbzeo4d-shard-00-00.qxmfild.mongodb.net
+ac-mbzeo4d-shard-00-01.qxmfild.mongodb.net
+ac-mbzeo4d-shard-00-02.qxmfild.mongodb.net
+
+Test 4 — TCP connectivity: Test-NetConnection
+ac-mbzeo4d-shard-00-00.qxmfild.mongodb.net -Port 27017 Result: -
+TcpTestSucceeded: True - The first server’s port 27017 was reachable.
+
+Test 5 — Node.js DNS-over-HTTPS: node -e
+“fetch(’https://cloudflare-dns.com/dns-query?name=_mongodb._tcp.cluster0.qxmfild.mongodb.net&type=SRV’,{headers:{accept:‘application/dns-json’}}).then(r=>r.json()).then(d=>console.log(JSON.stringify(d.Answer,null,2))).catch(console.error)”
+Result: - Successfully returned all three SRV records.
+
+Test 6 — Node.js standard TXT lookup: node -e
+“require(‘dns’).resolveTxt(‘cluster0.qxmfild.mongodb.net’,(err,records)=>console.log(err
+|| records))” Result: - Error: queryTxt ECONNREFUSED
+cluster0.qxmfild.mongodb.net
+
+Test 7 — Resolved the three server hostnames: node -e “const
+dns=require(‘dns’); const
+hosts=[‘ac-mbzeo4d-shard-00-00.qxmfild.mongodb.net’,‘ac-mbzeo4d-shard-00-01.qxmfild.mongodb.net’,‘ac-mbzeo4d-shard-00-02.qxmfild.mongodb.net’];
+hosts.forEach(h=>dns.lookup(h,(e,a)=>console.log(h,e?e.code:a)))”
+Result: - ac-mbzeo4d-shard-00-00.qxmfild.mongodb.net -> 159.41.171.14 -
+ac-mbzeo4d-shard-00-01.qxmfild.mongodb.net -> 159.41.171.28 -
+ac-mbzeo4d-shard-00-02.qxmfild.mongodb.net -> 159.41.171.51
+
+5.  Solution that worked Because SRV/TXT DNS lookups failed through the
+    normal resolver, the .env MONGODB_URI was changed from the
+    mongodb+srv:// format to a standard mongodb:// URI listing all three
+    Atlas hosts explicitly, with TLS, replica set, and authentication
+    source parameters.
+
+Important connection settings used: - Protocol: mongodb:// - Port: 27017
+for each host - TLS enabled - Replica set: atlas-2dg53w-shard-0 -
+Authentication source: admin - Database path: ironpulse
+
+The actual URI includes the database username and password. They are
+intentionally NOT recorded in this document for security.
+
+6.  Final successful result Ran this command from the server directory:
+    node index.js
+
+Output: injected env (2) from .env MongoDB connected successfully
+IronPulse server running on http://localhost:5000
+
+This confirms that the backend successfully connected to MongoDB Atlas
+and the Express server started.
+
+7.  Current code notes The main server/index.js uses dotenv, Express,
+    and Mongoose; it checks that MONGODB_URI exists, connects with
+    mongoose.connect(process.env.MONGODB_URI), then starts listening on
+    the configured port. The earlier dns.setServers([“8.8.8.8”,
+    “8.8.4.4”]) workaround did not solve the DNS problem and was removed
+    for the DNS test. Check the current index.js before making further
+    changes.
+
+8.  Security and Git notes
+
+-   Keep the real server/.env file out of Git.
+-   Ensure .gitignore excludes .env files, for example: .env **/.env
+    node_quickstart/.env
+-   It is safe to commit server/.env.example only if it contains
+    placeholders and no real credentials.
+-   Never write the database password or full real connection URI into
+    this notes file, README, screenshots, Git commit messages, or public
+    GitHub.
+-   If a real password or URI is accidentally committed, remove it from
+    the repository history as appropriate and rotate the database
+    password in Atlas.
+
+9.  Next steps
+
+-   Verify the health endpoint in a browser:
+    http://localhost:5000/health
+-   Review git status and ensure .env is not staged.
+-   Commit the working MongoDB connection code and this setup-notes
+    document.
+-   Continue Task 2 by creating the Delivery Mongoose model and CRUD
+    REST API.

@@ -2,7 +2,8 @@
 require("dotenv").config();
 const deliveryRoutes = require("./routes/deliveryRoutes");
 const authRoutes = require("./routes/authRoutes");
-
+const vehicleRoutes = require("./routes/vehicleRoutes");
+const errorMiddleware = require("./middleware/errorMiddleware");
 // const dns = require("dns");
 // dns.setServers(["8.8.8.8", "8.8.4.4"]);
 
@@ -13,8 +14,10 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware to read JSON data
+app.use(errorMiddleware);
 app.use(express.json());
 app.use("/api/auth", authRoutes);
+app.use("/api/vehicles", vehicleRoutes);
 
 app.use("/api/deliveries", deliveryRoutes);
 

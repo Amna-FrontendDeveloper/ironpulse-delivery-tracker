@@ -3,10 +3,15 @@
   "version": "1.0.0",
   "description": "A MERN monorepo starter for the IronPulse Delivery Tracker.",
   "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "npm run lint --prefix client && npm run lint --prefix server"
-  },
+  
+"scripts": {
+  "start": "node index.js",
+  "dev": "node --watch index.js",
+  "lint": "eslint index.js .",
+  "test": "jest --runInBand"
+},
+
+
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Amna-FrontendDeveloper/ironpulse-delivery-tracker.git"

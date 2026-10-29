@@ -5,10 +5,13 @@ const deliveryRoutes = require("./routes/deliveryRoutes");
 const authRoutes = require("./routes/authRoutes");
 const vehicleRoutes = require("./routes/vehicleRoutes");
 const errorMiddleware = require("./middleware/errorMiddleware");
+const cookieParser = require("cookie-parser");
 
 const app = express();
 
+// Middleware must run before API routes
 app.use(express.json());
+app.use(cookieParser());
 
 // API routes
 app.use("/api/auth", authRoutes);

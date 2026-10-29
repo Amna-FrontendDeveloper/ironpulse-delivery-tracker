@@ -6,6 +6,17 @@ const User = require("../models/User");
 
 const router = express.Router();
 
+const COOKIE_NAME = "ironpulse_token";
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+const cookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax",
+  maxAge: ONE_DAY_MS,
+  path: "/",
+};
+
 // GET: Test auth routes
 router.get("/test", (req, res) => {
   res.status(200).json({
@@ -138,9 +149,10 @@ router.post("/login", async (req, res) => {
       { expiresIn: "1d" }
     );
 
+    res.cookie(COOKIE_NAME, token, cookieOptions);
+
     return res.status(200).json({
       message: "Login successful",
-      token,
       user: {
         id: user._id,
         name: user.name,
@@ -155,6 +167,20 @@ router.post("/login", async (req, res) => {
       message: "Unable to log in",
     });
   }
+});
+
+// POST: Logout user
+router.post("/logout", (req, res) => {
+  res.clearCookie(COOKIE_NAME, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+  });
+
+  return res.status(200).json({
+    message: "Logout successful",
+  });
 });
 
 module.exports = router;

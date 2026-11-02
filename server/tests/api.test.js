@@ -11,7 +11,6 @@ jest.setTimeout(30000);
 
 let adminEmail;
 let adminPassword;
-let adminId;
 let driverEmail;
 let driverPassword;
 let driverId;
@@ -65,7 +64,6 @@ beforeAll(async () => {
     },
   ]);
 
-  adminId = admin._id;
   driverId = driver._id;
 
   const [adminLogin, driverLogin] = await Promise.all([

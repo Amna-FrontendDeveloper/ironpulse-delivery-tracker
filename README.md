@@ -128,10 +128,17 @@ Run from `server/`:
 npm test
 ```
 
-The Jest/Supertest suite currently checks:
+The Jest/Supertest suite covers:
 
-- `GET /api/vehicles`
-- `POST /api/deliveries`
+- Driver registration, bcrypt password hashing and HttpOnly JWT cookie issuance
+- Prevention of public admin registration
+- Successful login and rejection of incorrect credentials
+- Rejection of missing and invalid JWT cookies on protected routes
+- Admin access to all deliveries
+- Driver access limited to their own assigned deliveries
+- Rejection of delivery creation by drivers
+- Successful delivery creation by admins
+- `GET /api/vehicles` response
 
 ## Lint
 

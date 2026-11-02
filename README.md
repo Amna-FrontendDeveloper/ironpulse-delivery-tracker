@@ -1,4 +1,3 @@
-
 # IronPulse Delivery Tracker
 
 A MERN-stack application for managing fitness equipment deliveries and vehicles.
@@ -53,6 +52,17 @@ Never commit real database credentials or JWT secrets.
 
 ## API Endpoints
 
+### Auth — `/api/auth`
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| POST | `/api/auth/register` | Create a driver account (bcrypt-hashed password) and set the JWT cookie |
+| POST | `/api/auth/login` | Check credentials and set the JWT cookie |
+| POST | `/api/auth/logout` | Clear the JWT cookie |
+
+The JWT is stored in an **HttpOnly** cookie named `ironpulse_token` (1 day expiry, `Secure` in production).
+Registration always creates a `driver`; admin accounts are created directly in the database.
+
 ### Vehicles — `/api/vehicles`
 
 | Method | Endpoint | Purpose |
@@ -63,7 +73,12 @@ Never commit real database credentials or JWT secrets.
 | PUT | `/api/vehicles/:id` | Update a vehicle |
 | DELETE | `/api/vehicles/:id` | Delete a vehicle |
 
-### Deliveries — `/api/deliveries`
+### Deliveries — `/api/deliveries` (login required)
+
+Requests without a valid cookie get `401`. Access depends on the role:
+
+- **Admin:** sees and manages all deliveries.
+- **Driver:** sees only deliveries where `driverId` matches their user ID, and can only update the `status` of those.
 
 | Method | Endpoint | Purpose |
 |---|---|---|
@@ -87,10 +102,12 @@ Run tests from the `server/` directory:
 npm test
 ```
 
-The Jest/Supertest suite currently checks:
+The tests connect to the database in `MONGODB_URI` and delete the test data they create. The Jest/Supertest suite checks:
 
-- `GET /api/vehicles`
-- `POST /api/deliveries`
+- Registration (hashed password, JWT cookie, duplicate email, short password, role cannot be self-assigned)
+- Login (valid, wrong password, unknown email)
+- Protected routes (401 without or with a bad token, driver sees only own deliveries, admin sees all, driver cannot create)
+- `GET /api/vehicles` and admin `POST /api/deliveries`
 
 ## Lint
 
@@ -98,4 +115,3 @@ Run the backend lint script from the `server/` directory:
 
 ```bash
 npm run lint
-```

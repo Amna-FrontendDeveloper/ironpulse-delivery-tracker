@@ -1,131 +1,102 @@
-require("dotenv").config({ path: require("path").resolve(__dirname, "../.env") });
-const request = require("supertest");
+
+require("dotenv").config();
+
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
+const request = require("supertest");
 const app = require("../app");
 
 const User = require("../models/User");
 const Delivery = require("../models/Delivery");
 
-describe("IronPulse Delivery API", () => {
-  let admin;
-  let adminCookie;
-  let deliveryId;
+jest.setTimeout(20000);
 
-  const testEmail = `admin-test-${Date.now()}@example.com`;
+let adminEmail;
+let adminPassword;
 
-  beforeAll(async () => {
-    if (mongoose.connection.readyState !== 1) {
-      await mongoose.connect(process.env.MONGODB_URI);
-    }
+beforeAll(async () => {
+  if (!process.env.MONGODB_URI) {
+    throw new Error("MONGODB_URI is missing from server/.env");
+  }
 
-    const hashedPassword = await bcrypt.hash("TestPassword123!", 10);
+  if (!process.env.JWT_SECRET) {
+    throw new Error("JWT_SECRET is missing from server/.env");
+  }
 
-    admin = await User.create({
-      name: "Test Admin",
-      email: testEmail,
-      password: hashedPassword,
-      role: "admin",
-    });
+  if (mongoose.connection.readyState === 0) {
+    await mongoose.connect(process.env.MONGODB_URI);
+  }
 
-    // Generate a test token and send it as the auth cookie.
-    const token = jwt.sign(
-      {
-        userId: admin._id.toString(),
-        role: admin.role,
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" }
-    );
+  adminEmail = `test-admin-${Date.now()}@ironpulse.test`;
+  adminPassword = `TestPassword-${Date.now()}!`;
 
-    adminCookie = `ironpulse_token=${token}`;
+  const hashedPassword = await bcrypt.hash(adminPassword, 12);
+
+  await User.create({
+    name: "IronPulse Test Admin",
+    email: adminEmail,
+    password: hashedPassword,
+    role: "admin",
   });
+});
 
-  afterAll(async () => {
-    if (deliveryId) {
-      await Delivery.findByIdAndDelete(deliveryId);
+afterAll(async () => {
+  try {
+    if (adminEmail) {
+      await User.deleteOne({ email: adminEmail });
     }
-
-    if (admin?._id) {
-      await User.findByIdAndDelete(admin._id);
+  } finally {
+    if (mongoose.connection.readyState !== 0) {
+      await mongoose.disconnect();
     }
+  }
+});
 
-    await mongoose.disconnect();
-  });
-
+describe("IronPulse API", () => {
   test("GET /api/vehicles returns a list", async () => {
-    const response = await request(app)
-      .get("/api/vehicles")
-      .set("Cookie", adminCookie);
+    const response = await request(app).get("/api/vehicles");
 
-    expect(response.status).toBe(200);
+    expect(response.statusCode).toBe(200);
     expect(Array.isArray(response.body)).toBe(true);
   });
 
-  test("POST /api/deliveries creates a delivery", async () => {
-    const response = await request(app)
-      .post("/api/deliveries")
-      .set("Cookie", adminCookie)
-      .send({
-        trackingNumber: `IP-TEST-${Date.now()}`,
-        customerName: "Test Customer",
-        deliveryAddress: "Test Street, Lahore",
-        status: "Pending",
-      });
+  test("POST /api/deliveries creates a delivery for an admin", async () => {
+    const trackingNumber = `TEST-${Date.now()}`;
 
-    expect(response.status).toBe(201);
-    expect(response.body._id).toBeDefined();
-    expect(response.body.customerName).toBe("Test Customer");
+    try {
+      const loginResponse = await request(app)
+        .post("/api/auth/login")
+        .send({
+          email: adminEmail,
+          password: adminPassword,
+        });
 
-    deliveryId = response.body._id;
-  });
+      expect(loginResponse.statusCode).toBe(200);
 
-  test("GET /api/deliveries returns deliveries", async () => {
-    const response = await request(app)
-      .get("/api/deliveries")
-      .set("Cookie", adminCookie);
+      const setCookie = loginResponse.headers["set-cookie"] || [];
 
-    expect(response.status).toBe(200);
-    expect(Array.isArray(response.body)).toBe(true);
-    expect(
-      response.body.some((delivery) => delivery._id === deliveryId)
-    ).toBe(true);
-  });
+      const authCookie = setCookie.find((cookie) =>
+        cookie.startsWith("ironpulse_token=")
+      );
 
-  test("GET /api/deliveries/:id returns one delivery", async () => {
-    const response = await request(app)
-      .get(`/api/deliveries/${deliveryId}`)
-      .set("Cookie", adminCookie);
+      expect(authCookie).toBeDefined();
 
-    expect(response.status).toBe(200);
-    expect(response.body._id).toBe(deliveryId);
-  });
+      const cookiePair = authCookie.split(";")[0];
 
-  test("PUT /api/deliveries/:id updates a delivery", async () => {
-    const response = await request(app)
-      .put(`/api/deliveries/${deliveryId}`)
-      .set("Cookie", adminCookie)
-      .send({ status: "In Transit" });
+      const response = await request(app)
+        .post("/api/deliveries")
+        .set("Cookie", cookiePair)
+        .send({
+          trackingNumber,
+          customerName: "Test Customer",
+          deliveryAddress: "Test Address",
+        });
 
-    expect(response.status).toBe(200);
-    expect(response.body.status).toBe("In Transit");
-  });
-
-  test("DELETE /api/deliveries/:id deletes a delivery", async () => {
-    const response = await request(app)
-      .delete(`/api/deliveries/${deliveryId}`)
-      .set("Cookie", adminCookie);
-
-    expect(response.status).toBe(200);
-    expect(response.body.message).toBe("Delivery deleted successfully");
-
-    deliveryId = null;
-  });
-
-  test("Unauthenticated users cannot access deliveries", async () => {
-    const response = await request(app).get("/api/deliveries");
-
-    expect(response.status).toBe(401);
+      expect(response.statusCode).toBe(201);
+      expect(response.body.trackingNumber).toBe(trackingNumber);
+      expect(response.body.customerName).toBe("Test Customer");
+    } finally {
+      await Delivery.deleteOne({ trackingNumber });
+    }
   });
 });

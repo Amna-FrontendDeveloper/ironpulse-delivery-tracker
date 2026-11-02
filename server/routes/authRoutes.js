@@ -1,4 +1,3 @@
-
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -17,17 +16,32 @@ const cookieOptions = {
   path: "/",
 };
 
-// GET: Test auth routes
-router.get("/test", (req, res) => {
-  res.status(200).json({
-    message: "Auth routes are working",
-  });
+const createAuthToken = (user) =>
+  jwt.sign(
+    {
+      userId: user._id.toString(),
+      role: user.role,
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: "1d" }
+  );
+
+const publicUser = (user) => ({
+  id: user._id,
+  name: user.name,
+  email: user.email,
+  role: user.role,
 });
 
-// POST: Register a new driver
+// GET: Test auth routes
+router.get("/test", (req, res) => {
+  res.status(200).json({ message: "Auth routes are working" });
+});
+
+// POST: Register a new driver. Public registration must never grant admin access.
 router.post("/register", async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password } = req.body || {};
 
     if (
       typeof name !== "string" ||
@@ -48,11 +62,15 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    const normalizedEmail = email.trim().toLowerCase();
+    if (!process.env.JWT_SECRET) {
+      console.error("JWT_SECRET is missing from the .env file");
+      return res.status(500).json({
+        message: "Authentication configuration error",
+      });
+    }
 
-    const existingUser = await User.findOne({
-      email: normalizedEmail,
-    });
+    const normalizedEmail = email.trim().toLowerCase();
+    const existingUser = await User.findOne({ email: normalizedEmail });
 
     if (existingUser) {
       return res.status(409).json({
@@ -61,7 +79,6 @@ router.post("/register", async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
-
     const user = await User.create({
       name: name.trim(),
       email: normalizedEmail,
@@ -69,14 +86,12 @@ router.post("/register", async (req, res) => {
       role: "driver",
     });
 
+    const token = createAuthToken(user);
+    res.cookie(COOKIE_NAME, token, cookieOptions);
+
     return res.status(201).json({
       message: "User registered successfully",
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+      user: publicUser(user),
     });
   } catch (error) {
     if (error.code === 11000) {
@@ -86,7 +101,6 @@ router.post("/register", async (req, res) => {
     }
 
     console.error("Registration error:", error.message);
-
     return res.status(500).json({
       message: "Unable to register user",
     });
@@ -96,7 +110,7 @@ router.post("/register", async (req, res) => {
 // POST: Login user
 router.post("/login", async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password } = req.body || {};
 
     if (
       typeof email !== "string" ||
@@ -109,60 +123,32 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    const normalizedEmail = email.trim().toLowerCase();
-
-    const user = await User.findOne({
-      email: normalizedEmail,
-    });
-
-    if (!user) {
-      return res.status(401).json({
-        message: "Invalid email or password",
-      });
-    }
-
-    const isPasswordValid = await bcrypt.compare(
-      password,
-      user.password
-    );
-
-    if (!isPasswordValid) {
-      return res.status(401).json({
-        message: "Invalid email or password",
-      });
-    }
-
     if (!process.env.JWT_SECRET) {
       console.error("JWT_SECRET is missing from the .env file");
-
       return res.status(500).json({
         message: "Authentication configuration error",
       });
     }
 
-    const token = jwt.sign(
-      {
-        userId: user._id.toString(),
-        role: user.role,
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: "1d" }
-    );
+    const user = await User.findOne({
+      email: email.trim().toLowerCase(),
+    });
 
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return res.status(401).json({
+        message: "Invalid email or password",
+      });
+    }
+
+    const token = createAuthToken(user);
     res.cookie(COOKIE_NAME, token, cookieOptions);
 
     return res.status(200).json({
       message: "Login successful",
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+      user: publicUser(user),
     });
   } catch (error) {
     console.error("Login error:", error.message);
-
     return res.status(500).json({
       message: "Unable to log in",
     });
@@ -178,9 +164,7 @@ router.post("/logout", (req, res) => {
     path: "/",
   });
 
-  return res.status(200).json({
-    message: "Logout successful",
-  });
+  return res.status(200).json({ message: "Logout successful" });
 });
 
 module.exports = router;

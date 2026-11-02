@@ -8,7 +8,7 @@ A MERN-stack application for managing fitness equipment deliveries and vehicles.
 - **Backend:** Node.js, Express.js
 - **Database:** MongoDB Atlas, Mongoose
 - **Testing:** Jest and Supertest
-- **Authentication:** JWT and bcryptjs
+- **Authentication:** JWT, bcryptjs and HttpOnly cookies
 
 ## Project Structure
 
@@ -16,69 +16,86 @@ A MERN-stack application for managing fitness equipment deliveries and vehicles.
 - `server/` — Express backend
 - `server/models/` — Mongoose data models
 - `server/routes/` — REST API routes
-- `server/middleware/` — Error-handling middleware
+- `server/middleware/` — Authentication and error-handling middleware
 - `server/tests/` — Automated API tests
 
 ## Getting Started
 
-### 1. Frontend
+### Backend
 
-```bash
-cd client
-npm install
-npm start
-```
-
-### 2. Backend
-
-Open a terminal in the `server/` directory:
+Open a terminal in `server/`:
 
 ```bash
 npm install
-npm start
+npm run dev
 ```
 
-Configure the required environment variables in `server/.env` before starting the backend.
-
-Example `server/.env.example`:
+Configure `server/.env`:
 
 ```env
 PORT=5000
 MONGODB_URI=your_mongodb_connection_string
-JWT_SECRET=your_jwt_secret
+JWT_SECRET=replace_with_a_long_random_secret
+NODE_ENV=development
 ```
 
 Never commit real database credentials or JWT secrets.
 
-## API Endpoints
+### Frontend
 
-### Auth — `/api/auth`
+Open another terminal in `client/`:
+
+```bash
+npm install
+npm start
+```
+
+## Authentication and Authorization
+
+Authentication uses bcryptjs password hashing and a signed JWT stored in an HttpOnly cookie named `ironpulse_token`. The cookie expires after one day.
+
+- Public registration creates **driver** accounts only. A client-supplied `role` is ignored.
+- Admin accounts must be created through a trusted administrative/seed process; never expose public admin registration.
+- Login verifies the password and issues the JWT cookie.
+- Logout clears the authentication cookie.
+- Protected delivery endpoints return **401** when the cookie is missing, invalid or expired.
+- Admins can view all deliveries and create, update or delete deliveries.
+- Drivers can view only deliveries assigned to their user ID and can update only the status of their own assigned deliveries.
+
+### Auth endpoints
 
 | Method | Endpoint | Purpose |
 |---|---|---|
-| POST | `/api/auth/register` | Create a driver account (bcrypt-hashed password) and set the JWT cookie |
-| POST | `/api/auth/login` | Check credentials and set the JWT cookie |
+| POST | `/api/auth/register` | Register a driver and issue JWT cookie |
+| POST | `/api/auth/login` | Verify credentials and issue JWT cookie |
 | POST | `/api/auth/logout` | Clear the JWT cookie |
+| GET | `/api/auth/test` | Check auth router |
 
-The JWT is stored in an **HttpOnly** cookie named `ironpulse_token` (1 day expiry, `Secure` in production).
-Registration always creates a `driver`; admin accounts are created directly in the database.
+Example registration body:
+
+```json
+{
+  "name": "Test Driver",
+  "email": "driver@example.com",
+  "password": "DriverTest123!"
+}
+```
+
+The password must contain at least 8 characters. The API never returns the JWT in JSON; it is set as an HttpOnly cookie.
+
+## API Endpoints
 
 ### Vehicles — `/api/vehicles`
 
 | Method | Endpoint | Purpose |
 |---|---|---|
-| GET | `/api/vehicles` | List all vehicles |
-| GET | `/api/vehicles/:id` | Get a vehicle by ID |
+| GET | `/api/vehicles` | List vehicles |
+| GET | `/api/vehicles/:id` | Get a vehicle |
 | POST | `/api/vehicles` | Create a vehicle |
 | PUT | `/api/vehicles/:id` | Update a vehicle |
 | DELETE | `/api/vehicles/:id` | Delete a vehicle |
 
-### Deliveries — `/api/deliveries` (login required)
-
-Requests without a valid cookie get `401`. Access depends on the role:
-
-- **Admin:** sees and manages all deliveries.
-- **Driver:** sees only deliveries where `driverId` matches their user ID, and can only update the `status` of those.
+### Deliveries — `/api/deliveries`
 
 | Method | Endpoint | Purpose |
 |---|---|---|
@@ -92,26 +109,31 @@ Requests without a valid cookie get `401`. Access depends on the role:
 
 `GET http://localhost:5000/health`
 
-Returns the backend health status.
+## Manual API Verification (Postman)
+
+1. Register a driver with `POST http://localhost:5000/api/auth/register`.
+2. Confirm status **201** and a `Set-Cookie` response header containing `ironpulse_token` and `HttpOnly`.
+3. Login with the same credentials at `POST http://localhost:5000/api/auth/login`; expect **200**.
+4. Send `GET http://localhost:5000/api/deliveries` without a cookie; expect **401**.
+5. Send the same request with the login cookie; a driver receives only their assigned deliveries.
+6. Test admin access with an admin account created securely in the database; admin receives all deliveries.
+
+Postman normally stores response cookies automatically. Do not share JWT cookies or real credentials.
 
 ## Automated Tests
 
-Run tests from the `server/` directory:
+Run from `server/`:
 
 ```bash
 npm test
 ```
 
-The tests connect to the database in `MONGODB_URI` and delete the test data they create. The Jest/Supertest suite checks:
+The Jest/Supertest suite currently checks:
 
-- Registration (hashed password, JWT cookie, duplicate email, short password, role cannot be self-assigned)
-- Login (valid, wrong password, unknown email)
-- Protected routes (401 without or with a bad token, driver sees only own deliveries, admin sees all, driver cannot create)
-- `GET /api/vehicles` and admin `POST /api/deliveries`
+- `GET /api/vehicles`
+- `POST /api/deliveries`
 
 ## Lint
-
-Run the backend lint script from the `server/` directory:
 
 ```bash
 npm run lint

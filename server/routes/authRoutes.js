@@ -2,6 +2,7 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const authMiddleware = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
@@ -36,6 +37,19 @@ const publicUser = (user) => ({
 // GET: Test auth routes
 router.get("/test", (req, res) => {
   res.status(200).json({ message: "Auth routes are working" });
+});
+
+// GET: Restore the signed-in user when the React app is refreshed.
+router.get("/me", authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(401).json({ message: "User session is no longer valid" });
+    }
+    return res.status(200).json({ user: publicUser(user) });
+  } catch (error) {
+    return res.status(500).json({ message: "Unable to verify session" });
+  }
 });
 
 // POST: Register a new driver. Public registration must never grant admin access.

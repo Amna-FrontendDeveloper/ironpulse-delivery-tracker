@@ -287,6 +287,32 @@ describe("IronPulse Task 3 - Authentication and Role-Based Access", () => {
     }
   });
 
+  test("Driver can PATCH the status of their own assigned delivery", async () => {
+    const trackingNumber = `${testTrackingPrefix}-PATCH-STATUS`;
+    const delivery = await Delivery.create({
+      trackingNumber,
+      customerName: "Status Update Customer",
+      deliveryAddress: "Status Update Test Address",
+      driverId: driverOne._id,
+      status: "Pending",
+    });
+
+    try {
+      const response = await request(app)
+        .patch(`/api/deliveries/${delivery._id}`)
+        .set("Cookie", driverOneCookie)
+        .send({ status: "Picked Up" });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.body.status).toBe("Picked Up");
+
+      const savedDelivery = await Delivery.findById(delivery._id);
+      expect(savedDelivery.status).toBe("Picked Up");
+    } finally {
+      await Delivery.deleteOne({ _id: delivery._id });
+    }
+  });
+
   test("GET /api/vehicles returns a list", async () => {
     const response = await request(app).get("/api/vehicles");
 

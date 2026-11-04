@@ -34,6 +34,7 @@ Configure `server/.env`:
 
 ```env
 PORT=5000
+CLIENT_URL=http://localhost:3000
 MONGODB_URI=your_mongodb_connection_string
 JWT_SECRET=replace_with_a_long_random_secret
 NODE_ENV=development
@@ -70,6 +71,7 @@ Authentication uses bcryptjs password hashing and a signed JWT stored in an Http
 | POST | `/api/auth/login` | Verify credentials and issue JWT cookie |
 | POST | `/api/auth/logout` | Clear the JWT cookie |
 | GET | `/api/auth/test` | Check auth router |
+| GET | `/api/auth/me` | Restore the current user from the JWT cookie |
 
 Example registration body:
 
@@ -102,7 +104,8 @@ The password must contain at least 8 characters. The API never returns the JWT i
 | GET | `/api/deliveries` | List all deliveries |
 | GET | `/api/deliveries/:id` | Get a delivery by ID |
 | POST | `/api/deliveries` | Create a delivery |
-| PUT | `/api/deliveries/:id` | Update a delivery |
+| PUT | `/api/deliveries/:id` | Admin update delivery details / legacy driver status update |
+| PATCH | `/api/deliveries/:id` | Driver updates their assigned delivery status |
 | DELETE | `/api/deliveries/:id` | Delete a delivery |
 
 ### Health Check
@@ -119,6 +122,12 @@ The password must contain at least 8 characters. The API never returns the JWT i
 6. Test admin access with an admin account created securely in the database; admin receives all deliveries.
 
 Postman normally stores response cookies automatically. Do not share JWT cookies or real credentials.
+
+## Driver Dashboard (Task 4 progress)
+
+The React client uses Axios with `withCredentials` so the browser sends the backend's HttpOnly `ironpulse_token` cookie. AuthContext restores the current session through `GET /api/auth/me`; React Router protects the dashboard. The driver dashboard loads the signed-in driver's assigned deliveries and updates status through `PATCH /api/deliveries/:id` without reloading the page.
+
+Allowed driver status updates are `Picked Up`, `In Transit`, and `Delivered`. The UI displays `Picked Up` as `Picked`. Configure `CLIENT_URL` in the server environment when the React app runs on a different origin.
 
 ## Automated Tests
 

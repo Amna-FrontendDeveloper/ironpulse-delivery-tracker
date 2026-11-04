@@ -1,5 +1,6 @@
 
 const express = require("express");
+const cors = require("cors");
 
 const deliveryRoutes = require("./routes/deliveryRoutes");
 const authRoutes = require("./routes/authRoutes");
@@ -8,6 +9,12 @@ const errorMiddleware = require("./middleware/errorMiddleware");
 const cookieParser = require("cookie-parser");
 
 const app = express();
+
+// Allow the React development server to send HttpOnly auth cookies.
+app.use(cors({
+  origin: process.env.CLIENT_URL || "http://localhost:3000",
+  credentials: true,
+}));
 
 // Middleware must run before API routes
 app.use(express.json());

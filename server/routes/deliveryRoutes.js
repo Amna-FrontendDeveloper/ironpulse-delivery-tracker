@@ -107,6 +107,50 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+// PATCH: Driver updates the status of their own assigned delivery.
+router.patch("/:id", async (req, res) => {
+  try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({ message: "Invalid delivery ID" });
+    }
+
+    if (req.user.role !== "driver") {
+      return res.status(403).json({
+        message: "Only drivers can use this status update endpoint",
+      });
+    }
+
+    const allowedStatuses = ["Picked Up", "In Transit", "Delivered"];
+    const keys = Object.keys(req.body || {});
+
+    if (
+      keys.length !== 1 ||
+      keys[0] !== "status" ||
+      !allowedStatuses.includes(req.body.status)
+    ) {
+      return res.status(400).json({
+        message: "Provide one valid status: Picked Up, In Transit, or Delivered",
+      });
+    }
+
+    const delivery = await Delivery.findOneAndUpdate(
+      { _id: req.params.id, driverId: req.user.userId },
+      { $set: { status: req.body.status } },
+      { new: true, runValidators: true }
+    );
+
+    if (!delivery) {
+      return res.status(404).json({
+        message: "Assigned delivery not found",
+      });
+    }
+
+    return res.status(200).json(delivery);
+  } catch (error) {
+    return res.status(400).json({ message: error.message });
+  }
+});
+
 // PUT: Admin can update delivery details.
 // Driver can update only the status of their assigned delivery.
 router.put("/:id", async (req, res) => {

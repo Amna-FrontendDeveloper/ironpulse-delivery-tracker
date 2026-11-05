@@ -149,6 +149,16 @@ The Jest/Supertest suite covers:
 - Successful delivery creation by admins
 - `GET /api/vehicles` response
 
+### Frontend dashboard tests
+
+Run from `client/`:
+
+```bash
+npm test -- --watchAll=false
+```
+
+The dashboard component tests cover loading, delivery rendering, status updates, API errors and the empty state.
+
 ## Lint
 
 ```bash

@@ -1,13 +1,8 @@
 import { render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
 import App from "./App";
 
 test("renders the IronPulse welcome page and driver sign-in link", () => {
-  render(
-    <MemoryRouter>
-      <App />
-    </MemoryRouter>
-  );
+  render(<App />);
 
   expect(
     screen.getByRole("heading", { name: /ironpulse delivery tracker/i })

@@ -112,6 +112,49 @@ The password must contain at least 8 characters. The API never returns the JWT i
 
 `GET http://localhost:5000/health`
 
+## Create the First Admin Account
+
+Public registration intentionally creates driver accounts only. To create the first admin, run the one-time seed script from the `server/` directory.
+
+Add these values to your local `server/.env` file (do not commit this file):
+
+```env
+ADMIN_NAME=IronPulse Admin
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=use-a-unique-password-at-least-12-characters-long
+```
+
+Run:
+
+```bash
+node scripts/seedAdmin.js
+```
+
+The script hashes the password with bcrypt and creates an admin account. It is safe to rerun: an existing admin is left unchanged, and an existing driver account is never promoted. Remove the three `ADMIN_*` values from `.env` after the account is created.
+
+## Task 4 End-to-End Verification
+
+1. Start the backend and frontend using the Getting Started instructions.
+2. Sign in to Postman as the seeded admin with `POST http://localhost:5000/api/auth/login`. Keep the returned HttpOnly cookie in Postman.
+3. In MongoDB Atlas, open the `users` collection and copy the `_id` of the driver account you want to assign. Do not use the admin's ID.
+4. While still authenticated as admin, send `POST http://localhost:5000/api/deliveries` with this JSON body, replacing the driver ID and sample details:
+
+```json
+{
+  "trackingNumber": "IP-TEST-1001",
+  "customerName": "Test Customer",
+  "deliveryAddress": "Main Boulevard, Lahore",
+  "status": "Pending",
+  "driverName": "Test Driver",
+  "driverId": "REPLACE_WITH_DRIVER_OBJECT_ID"
+}
+```
+
+Expect **201 Created**. Use a new tracking number if you repeat the test.
+5. Sign in to the React app using that same driver account. The assigned delivery should appear on the dashboard.
+6. Click **Mark Picked**, then **Mark In Transit**, then **Mark Delivered**. Confirm each status changes in the table without a page reload.
+7. Refresh the page and confirm the final status remains **Delivered**. Also confirm an unassigned driver cannot see this delivery.
+
 ## Manual API Verification (Postman)
 
 1. Register a driver with `POST http://localhost:5000/api/auth/register`.

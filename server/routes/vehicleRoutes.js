@@ -2,8 +2,40 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const Vehicle = require("../models/Vehicle");
+const authMiddleware = require("../middleware/authMiddleware");
 
 const router = express.Router();
+
+// GET: Current GPS locations for the manager map (admin role).
+router.get("/locations", authMiddleware, async (req, res, next) => {
+  if (req.user.role !== "admin") {
+    return res.status(403).json({
+      message: "Only managers can view vehicle locations",
+    });
+  }
+
+  try {
+    const vehicles = await Vehicle.find({
+      latitude: { $ne: null },
+      longitude: { $ne: null },
+      lastSeen: { $ne: null },
+    })
+      .select("_id latitude longitude lastSeen")
+      .sort({ lastSeen: -1 })
+      .lean();
+
+    const locations = vehicles.map((vehicle) => ({
+      vehicleId: vehicle._id.toString(),
+      lat: vehicle.latitude,
+      lng: vehicle.longitude,
+      updatedAt: vehicle.lastSeen,
+    }));
+
+    return res.status(200).json(locations);
+  } catch (error) {
+    return next(error);
+  }
+});
 
 // GET: All vehicles
 router.get("/", async (req, res, next) => {

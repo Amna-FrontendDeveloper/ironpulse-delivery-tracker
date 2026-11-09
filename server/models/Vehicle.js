@@ -39,6 +39,23 @@ const vehicleSchema = new mongoose.Schema(
       enum: ["Available", "In Use", "Maintenance"],
       default: "Available",
     },
+    // Simulated GPS coordinates; optional until the location seed script runs.
+    latitude: {
+      type: Number,
+      min: -90,
+      max: 90,
+      default: null,
+    },
+    longitude: {
+      type: Number,
+      min: -180,
+      max: 180,
+      default: null,
+    },
+    lastSeen: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );

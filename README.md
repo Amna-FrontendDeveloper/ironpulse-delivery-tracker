@@ -206,3 +206,33 @@ The dashboard component tests cover loading, delivery rendering, status updates,
 
 ```bash
 npm run lint
+
+## Task 5 — Live Vehicle Map and Route History
+
+The manager fleet workspace is available at `/manager/fleet` after signing in with an admin account.
+
+- **Live map:** Leaflet/OpenStreetMap markers for vehicles with saved GPS coordinates. Marker popups show vehicle ID and last update time. The client refreshes locations every 15 seconds.
+- **Route history:** Delivery table with inclusive start/end date filters and pagination (10 records per page).
+
+### Task 5 API
+
+| Method | Endpoint | Access | Purpose |
+|---|---|---|---|
+| GET | `/api/vehicles/locations` | Admin | Current GPS positions: `{ vehicleId, lat, lng, updatedAt }` |
+| GET | `/api/deliveries/history?page=1&limit=10&startDate=2026-11-01&endDate=2026-11-30` | Admin | Filtered history and pagination metadata |
+
+The history response is `{ data, total, page, limit, totalPages }`. Dates are optional; page defaults to 1 and limit defaults to 10 (maximum 100). MongoDB aggregation with `$facet` returns the selected page and total count together.
+
+### Seed simulated vehicle locations
+
+Run from `server/` after configuring `.env` and ensuring at least one vehicle exists:
+
+```bash
+node scripts/seedVehicleLocations.js
+```
+
+Optional `GPS_CENTER_LAT` and `GPS_CENTER_LNG` environment variables change the centre for generated coordinates. The script updates stored coordinates and `lastSeen`; it does not continuously move vehicles.
+
+### Frontend dependencies
+
+The client uses Leaflet, React Leaflet, date-fns and React Paginate. Run `npm install` in `client/` after pulling these changes.

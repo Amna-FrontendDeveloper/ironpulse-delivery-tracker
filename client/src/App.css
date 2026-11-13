@@ -226,3 +226,29 @@ h1 {
   .deliveries-panel { padding: 18px; }
   .dashboard-topbar h1 { font-size: 26px; }
 }
+
+
+/* Task 5: manager map and route-history workspace */
+.task5-panel { padding: 28px; background: #fff; border: 1px solid #e2e8f0; border-radius: 18px; box-shadow: 0 12px 36px rgba(23,32,51,.04); }
+.task5-panel-heading { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:20px; }
+.task5-panel-heading h2 { margin:6px 0 0; font-size:24px; }
+.task5-muted { color:#64748b; }
+.task5-tabs { display:flex; gap:8px; margin-bottom:20px; border-bottom:1px solid #e2e8f0; }
+.task5-tabs button { border:0; border-bottom:3px solid transparent; padding:12px 18px; background:transparent; color:#64748b; font-weight:700; }
+.task5-tabs button.active { border-bottom-color:#f97316; color:#172033; }
+.vehicle-map { width:100%; height:520px; border-radius:14px; z-index:1; }
+.map-status-row { display:flex; justify-content:space-between; gap:12px; margin-bottom:12px; color:#64748b; font-size:13px; }
+.history-count { color:#64748b; font-size:14px; }
+.history-filters { display:flex; align-items:end; flex-wrap:wrap; gap:14px; margin-bottom:22px; padding:18px; border-radius:12px; background:#f8fafc; }
+.history-filters label { min-width:190px; color:#475569; font-size:13px; font-weight:700; }
+.history-filters input { margin-top:7px; }
+.history-filter-actions { display:flex; gap:8px; }
+.task5-pagination { display:flex; justify-content:center; flex-wrap:wrap; gap:4px; margin:22px 0 0; padding:0; list-style:none; }
+.task5-pagination .page-link { border-radius:7px; color:#334155; }
+.task5-pagination .active .page-link { border-color:#f97316; background:#f97316; color:#fff; }
+@media (max-width:600px) {
+  .task5-panel { padding:18px; }
+  .vehicle-map { height:390px; }
+  .map-status-row { flex-direction:column; }
+  .history-filters label { width:100%; }
+}

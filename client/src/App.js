@@ -3,6 +3,8 @@ import "./App.css";
 import Login from "./components/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Dashboard from "./components/Dashboard";
+import AdminRoute from "./components/AdminRoute";
+import FleetManagement from "./pages/FleetManagement";
 
 function Home() {
   return (
@@ -30,6 +32,9 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route element={<ProtectedRoute />}>
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route element={<AdminRoute />}>
+            <Route path="/manager/fleet" element={<FleetManagement />} />
+          </Route>
         </Route>
         <Route path="*" element={<Home />} />
       </Routes>

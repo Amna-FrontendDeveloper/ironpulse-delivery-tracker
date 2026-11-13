@@ -78,6 +78,77 @@ router.post("/", allowRoles("admin"), async (req, res) => {
   }
 });
 
+// GET: Admin-only paginated delivery history with optional date range.
+router.get("/history", allowRoles("admin"), async (req, res) => {
+  try {
+    const page = Number.parseInt(req.query.page ?? "1", 10);
+    const limit = Number.parseInt(req.query.limit ?? "10", 10);
+    const { startDate, endDate } = req.query;
+
+    if (!Number.isInteger(page) || page < 1 || !Number.isInteger(limit) || limit < 1 || limit > 100) {
+      return res.status(400).json({ message: "page must be >= 1 and limit must be between 1 and 100" });
+    }
+
+    const match = {};
+    if (startDate || endDate) {
+      const range = {};
+      if (startDate) {
+        const start = new Date(startDate);
+        if (Number.isNaN(start.getTime())) return res.status(400).json({ message: "Invalid startDate" });
+        start.setHours(0, 0, 0, 0);
+        range.$gte = start;
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        if (Number.isNaN(end.getTime())) return res.status(400).json({ message: "Invalid endDate" });
+        end.setHours(23, 59, 59, 999);
+        range.$lte = end;
+      }
+      if (range.$gte && range.$lte && range.$gte > range.$lte) {
+        return res.status(400).json({ message: "startDate must be on or before endDate" });
+      }
+      match.createdAt = range;
+    }
+
+    const skip = (page - 1) * limit;
+    const [result] = await Delivery.aggregate([
+      { $match: match },
+      { $sort: { createdAt: -1, _id: -1 } },
+      {
+        $facet: {
+          data: [
+            { $skip: skip },
+            { $limit: limit },
+            {
+              $project: {
+                trackingNumber: 1,
+                customerName: 1,
+                deliveryAddress: 1,
+                status: 1,
+                driverName: 1,
+                createdAt: 1,
+                updatedAt: 1,
+              },
+            },
+          ],
+          metadata: [{ $count: "total" }],
+        },
+      },
+    ]);
+
+    const total = result?.metadata?.[0]?.total || 0;
+    return res.status(200).json({
+      data: result?.data || [],
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
+
 // GET: Fetch one delivery.
 // Drivers can access only their assigned deliveries.
 router.get("/:id", async (req, res) => {
